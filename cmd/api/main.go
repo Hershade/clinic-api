@@ -1,0 +1,51 @@
+package main
+
+import (
+	"log"
+	"net/http"
+	"time"
+
+	"clinic-api/internal/doctor"
+	"clinic-api/internal/health"
+	"clinic-api/internal/platform/config"
+	"clinic-api/internal/platform/db"
+)
+
+func main() {
+	cfg, err := config.Load()
+	if err != nil {
+		log.Fatalf("Error cargando configuracion: %v", err)
+	}
+
+	database, err := db.OpenPostgres(cfg)
+	if err != nil {
+		log.Fatalf("Error conectando a postgres: %v", err)
+	}
+
+	defer database.Close()
+
+	healthHandler := health.NewHandler(database)
+
+	doctorRepo := doctor.NewRepository(database)
+	doctorHandler := doctor.NewHandler(doctorRepo)
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler.Check)
+	mux.HandleFunc("/doctors", doctorHandler.DoctorsCollection)
+	mux.HandleFunc("/doctors/", doctorHandler.DoctorByID)
+
+	server := &http.Server{
+		Addr:         ":" + cfg.AppPort,
+		Handler:      mux,
+		ReadTimeout:  5 * time.Second,
+		WriteTimeout: 5 * time.Second,
+		IdleTimeout:  30 * time.Second,
+	}
+
+	log.Printf("Servidor corriendo en http://localhost:%s", cfg.AppPort)
+
+	if err := server.ListenAndServe(); err != nil {
+
+		log.Fatal(err)
+	}
+}

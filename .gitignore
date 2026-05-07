@@ -1,0 +1,28 @@
+# variables sensibles
+.env
+
+#Binarios compilados
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+#Archivos de GO
+*.test
+*.out
+coverage.out
+
+#Carpetas temporales/cache
+tmp/
+temp/
+
+#IDes
+.vscode/
+.idea/
+
+#os
+.DS_Store
+Thumbs.db
+*.iml

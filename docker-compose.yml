@@ -1,0 +1,15 @@
+#levantar contenedor con postgres y persistir los datos en el volumen
+services:
+  postgres:
+    image: postgres:16
+    container_name: clinic_postgres
+    environment:
+      POSTGRES_DB: clinic_db
+      POSTGRES_USER: clinic_user
+      POSTGRES_PASSWORD: clinic_pass
+    ports:
+      - "5433:5432"
+    volumes:
+      - clinic_pgdata:/var/lib/postgresql/data
+volumes:
+  clinic_pgdata:
