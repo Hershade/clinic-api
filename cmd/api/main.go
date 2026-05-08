@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"time"
 
+	"clinic-api/internal/appointment"
 	"clinic-api/internal/doctor"
 	"clinic-api/internal/health"
 	"clinic-api/internal/patient"
@@ -33,6 +34,9 @@ func main() {
 	patientRepo := patient.NewRepository(database)
 	patientHandler := patient.NewHandler(patientRepo)
 
+	appointmentRepo := appointment.NewRepository(database)
+	appointmentHandler := appointment.NewHandler(appointmentRepo)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler.Check)
 
@@ -41,6 +45,9 @@ func main() {
 
 	mux.HandleFunc("/patients", patientHandler.PatientsCollection)
 	mux.HandleFunc("/patients/", patientHandler.PatientByID)
+
+	mux.HandleFunc("/appointments", appointmentHandler.AppointmentsCollection)
+	mux.HandleFunc("/appointments/", appointmentHandler.AppointmentByID)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,
