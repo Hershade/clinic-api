@@ -47,7 +47,7 @@ func main() {
 	mux.HandleFunc("/patients/", patientHandler.PatientByID)
 
 	mux.HandleFunc("/appointments", appointmentHandler.AppointmentsCollection)
-	mux.HandleFunc("/appointments/", appointmentHandler.AppointmentByID)
+	mux.HandleFunc("/appointments/", appointmentHandler.AppointmentRoutes)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,

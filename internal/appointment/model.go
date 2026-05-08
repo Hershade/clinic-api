@@ -7,9 +7,10 @@ import (
 )
 
 var (
-	ErrDoctorNotFound       = errors.New("doctor no encontrado")
-	ErrPatientNotFound      = errors.New("paciente no encontrado")
-	ErrAppointmentSlotTaken = errors.New("el doctor ya tiene una cita en esa fecha y hora")
+	ErrDoctorNotFound             = errors.New("doctor no encontrado")
+	ErrPatientNotFound            = errors.New("paciente no encontrado")
+	ErrAppointmentSlotTaken       = errors.New("el doctor ya tiene una cita en esa fecha y hora")
+	ErrAppointmentAlreadyCanceled = errors.New("la cita ya fue cancelada")
 )
 
 type Appointment struct {

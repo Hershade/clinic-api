@@ -14,7 +14,7 @@ func NewRepository(db *sql.DB) *Repository {
 }
 
 func (r *Repository) List() ([]Appointment, error) {
-	rows, err := r.db.Query(`
+	return r.listByQuery(`
 		SELECT
 			a.id,
 			a.doctor_id,
@@ -30,6 +30,50 @@ func (r *Repository) List() ([]Appointment, error) {
 		INNER JOIN patients p ON p.id = a.patient_id
 		ORDER BY a.fecha ASC, a.hora ASC, a.id ASC
 	`)
+}
+
+func (r *Repository) ListByDoctor(doctorID int64) ([]Appointment, error) {
+	return r.listByQuery(`
+		SELECT
+			a.id,
+			a.doctor_id,
+			d.nombre AS doctor_nombre,
+			a.patient_id,
+			p.nombre AS patient_nombre,
+			TO_CHAR(a.fecha, 'YYYY-MM-DD') AS fecha,
+			TO_CHAR(a.hora, 'HH24:MI:SS') AS hora,
+			a.motivo,
+			a.estado
+		FROM appointments a
+		INNER JOIN doctors d ON d.id = a.doctor_id
+		INNER JOIN patients p ON p.id = a.patient_id
+		WHERE a.doctor_id = $1
+		ORDER BY a.fecha ASC, a.hora ASC, a.id ASC
+	`, doctorID)
+}
+
+func (r *Repository) ListByPatient(patientID int64) ([]Appointment, error) {
+	return r.listByQuery(`
+		SELECT
+			a.id,
+			a.doctor_id,
+			d.nombre AS doctor_nombre,
+			a.patient_id,
+			p.nombre AS patient_nombre,
+			TO_CHAR(a.fecha, 'YYYY-MM-DD') AS fecha,
+			TO_CHAR(a.hora, 'HH24:MI:SS') AS hora,
+			a.motivo,
+			a.estado
+		FROM appointments a
+		INNER JOIN doctors d ON d.id = a.doctor_id
+		INNER JOIN patients p ON p.id = a.patient_id
+		WHERE a.patient_id = $1
+		ORDER BY a.fecha ASC, a.hora ASC, a.id ASC
+	`, patientID)
+}
+
+func (r *Repository) listByQuery(query string, args ...any) ([]Appointment, error) {
+	rows, err := r.db.Query(query, args...)
 	if err != nil {
 		return nil, fmt.Errorf("error en query de appointments: %w", err)
 	}
@@ -138,6 +182,28 @@ func (r *Repository) Create(input CreateAppointmentRequest) (Appointment, error)
 	).Scan(&id)
 	if err != nil {
 		return Appointment{}, fmt.Errorf("error creando appointment: %w", err)
+	}
+
+	return r.GetByID(id)
+}
+
+func (r *Repository) Cancel(id int64) (Appointment, error) {
+	current, err := r.GetByID(id)
+	if err != nil {
+		return Appointment{}, err
+	}
+
+	if current.Estado == "cancelada" {
+		return Appointment{}, ErrAppointmentAlreadyCanceled
+	}
+
+	_, err = r.db.Exec(`
+		UPDATE appointments
+		SET estado = 'cancelada'
+		WHERE id = $1
+	`, id)
+	if err != nil {
+		return Appointment{}, fmt.Errorf("error cancelando appointment: %w", err)
 	}
 
 	return r.GetByID(id)
