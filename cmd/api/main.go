@@ -7,6 +7,7 @@ import (
 
 	"clinic-api/internal/doctor"
 	"clinic-api/internal/health"
+	"clinic-api/internal/patient"
 	"clinic-api/internal/platform/config"
 	"clinic-api/internal/platform/db"
 )
@@ -29,10 +30,17 @@ func main() {
 	doctorRepo := doctor.NewRepository(database)
 	doctorHandler := doctor.NewHandler(doctorRepo)
 
+	patientRepo := patient.NewRepository(database)
+	patientHandler := patient.NewHandler(patientRepo)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler.Check)
+
 	mux.HandleFunc("/doctors", doctorHandler.DoctorsCollection)
 	mux.HandleFunc("/doctors/", doctorHandler.DoctorByID)
+
+	mux.HandleFunc("/patients", patientHandler.PatientsCollection)
+	mux.HandleFunc("/patients/", patientHandler.PatientByID)
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,
