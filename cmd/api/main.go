@@ -6,8 +6,10 @@ import (
 	"time"
 
 	"clinic-api/internal/appointment"
+	"clinic-api/internal/auth"
 	"clinic-api/internal/doctor"
 	"clinic-api/internal/health"
+	"clinic-api/internal/middleware"
 	"clinic-api/internal/patient"
 	"clinic-api/internal/platform/config"
 	"clinic-api/internal/platform/db"
@@ -23,10 +25,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error conectando a postgres: %v", err)
 	}
-
 	defer database.Close()
 
 	healthHandler := health.NewHandler(database)
+
+	authRepo := auth.NewRepository(database)
+	if err := authRepo.EnsureSeedAdmin(cfg.AdminUsername, cfg.AdminPassword, cfg.AdminRole); err != nil {
+		log.Fatalf("Error creando admin semilla: %v", err)
+	}
+
+	jwtManager := auth.NewJWTManager(cfg.JWTSecret, cfg.JWTExpiresHours)
+	authHandler := auth.NewHandler(authRepo, jwtManager)
+	authMiddleware := auth.NewMiddleware(jwtManager)
 
 	doctorRepo := doctor.NewRepository(database)
 	doctorHandler := doctor.NewHandler(doctorRepo)
@@ -38,20 +48,24 @@ func main() {
 	appointmentHandler := appointment.NewHandler(appointmentRepo)
 
 	mux := http.NewServeMux()
+
+	// Públicas
 	mux.HandleFunc("/health", healthHandler.Check)
+	mux.HandleFunc("/auth/login", authHandler.Login)
 
-	mux.HandleFunc("/doctors", doctorHandler.DoctorsCollection)
-	mux.HandleFunc("/doctors/", doctorHandler.DoctorByID)
+	// Protegidas
+	mux.Handle("/doctors", authMiddleware.RequireAuth(http.HandlerFunc(doctorHandler.DoctorsCollection)))
+	mux.Handle("/doctors/", authMiddleware.RequireAuth(http.HandlerFunc(doctorHandler.DoctorByID)))
 
-	mux.HandleFunc("/patients", patientHandler.PatientsCollection)
-	mux.HandleFunc("/patients/", patientHandler.PatientByID)
+	mux.Handle("/patients", authMiddleware.RequireAuth(http.HandlerFunc(patientHandler.PatientsCollection)))
+	mux.Handle("/patients/", authMiddleware.RequireAuth(http.HandlerFunc(patientHandler.PatientByID)))
 
-	mux.HandleFunc("/appointments", appointmentHandler.AppointmentsCollection)
-	mux.HandleFunc("/appointments/", appointmentHandler.AppointmentRoutes)
+	mux.Handle("/appointments", authMiddleware.RequireAuth(http.HandlerFunc(appointmentHandler.AppointmentsCollection)))
+	mux.Handle("/appointments/", authMiddleware.RequireAuth(http.HandlerFunc(appointmentHandler.AppointmentRoutes)))
 
 	server := &http.Server{
 		Addr:         ":" + cfg.AppPort,
-		Handler:      mux,
+		Handler:      middleware.CORS(mux),
 		ReadTimeout:  5 * time.Second,
 		WriteTimeout: 5 * time.Second,
 		IdleTimeout:  30 * time.Second,
@@ -60,7 +74,6 @@ func main() {
 	log.Printf("Servidor corriendo en http://localhost:%s", cfg.AppPort)
 
 	if err := server.ListenAndServe(); err != nil {
-
 		log.Fatal(err)
 	}
 }
