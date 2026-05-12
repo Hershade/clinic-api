@@ -25,9 +25,7 @@ type EnvConfig struct {
 }
 
 func Load() (*EnvConfig, error) {
-	if err := godotenv.Overload(); err != nil {
-		return nil, fmt.Errorf("no se pudo cargar .env: %w", err)
-	}
+	_ = godotenv.Overload()
 
 	expiresHoursStr := getEnvOrDefault("JWT_EXPIRES_HOURS", "24")
 	expiresHours, err := strconv.Atoi(expiresHoursStr)
