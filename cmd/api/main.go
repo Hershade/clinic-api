@@ -49,6 +49,15 @@ func main() {
 
 	mux := http.NewServeMux()
 
+	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/" {
+			http.NotFound(w, r)
+			return
+		}
+
+		http.Redirect(w, r, "/health", http.StatusFound)
+	})
+
 	// Públicas
 	mux.HandleFunc("/health", healthHandler.Check)
 	mux.HandleFunc("/auth/login", authHandler.Login)
